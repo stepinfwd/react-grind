@@ -1,22 +1,53 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 
-function App() {
-  const defaultUser = { name: 'kiran', age: 26 };
-  const [user, setUser] = useState({});
-  const renderCount = useRef(0);
+const UserProfile = () => {
+  const isMounted = useRef(false);
+  const [userId, setUserId] = useState(1);
+  const [userData, setUserData] = useState(null);
 
-  renderCount.current += 1; // Increment on every render
+  const fetchUserData = useCallback(async () => {
+    console.log('fetchUserData-----');
+    try {
+      const response = await fetch(
+        `https://jsonplaceholder.typicode.com/users/${userId}`
+      );
+      const data = await response.json();
+      setUserData(data);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  }, [userId]);
 
   useEffect(() => {
-    setUser(defaultUser);
-  }, [defaultUser]);
+    if (!isMounted.current) {
+      isMounted.current = true;
+      return; // Avoid effect on first mount
+    }
+
+    fetchUserData();
+  }, [fetchUserData]);
 
   return (
-    <>
-      <div>{user.name}</div>
-      <p>{renderCount.current}</p>
-    </>
+    <div>
+      <h2>User Profile</h2>
+      {userData ? (
+        <div>
+          <p>
+            <strong>Name:</strong> {userData.name}
+          </p>
+          <p>
+            <strong>Email:</strong> {userData.email}
+          </p>
+          <p>
+            <strong>Phone:</strong> {userData.phone}
+          </p>
+        </div>
+      ) : (
+        <p>Loading...</p>
+      )}
+      <button onClick={() => setUserId((prev) => prev + 1)}>Next User</button>
+    </div>
   );
-}
+};
 
-export default App;
+export default UserProfile;
