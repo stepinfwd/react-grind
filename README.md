@@ -1,75 +1,128 @@
-# Understanding `useEffect` Cleanup When Dependencies Change
+# React Dependency Arrays: Avoiding Infinite Re-renders
 
 ## Introduction
+Understanding how dependency arrays work in React hooks (`useEffect`, `useMemo`, `useCallback`) is crucial for preventing performance issues and infinite re-render loops. This document explains the behavior with different value types and provides best practices.
 
-React's `useEffect` hook allows us to perform side effects in function components, such as fetching data, setting up event listeners, or manipulating the DOM.
+## Core Concept
+React uses **referential equality (`Object.is`)** to compare dependencies between renders. This means:
 
-A key concept in `useEffect` is **cleanup functions**, which help prevent memory leaks and ensure proper resource management.
+- **Primitives** (strings, numbers, booleans): Compared by value
+- **Non-primitives** (objects, arrays, functions): Compared by memory reference
 
-This article focuses on how `useEffect` behaves when **dependencies change** and why the **cleanup function** is essential.
+## Behavior by Data Type
 
----
-
-## The Code in Question
-
-```jsx
+### ✅ Safe: Primitives
+```javascript
+// Strings, numbers, booleans are safe
 useEffect(() => {
-  console.log('mounted', count);
+  console.log("Safe!");
+}, ["constant string", 42, true]);
+```
+#### Characteristics:
+- Same value → same dependency
+- No re-render triggered if value doesn't change
+- Example: `"react" === "react"` → `true`
 
-  return () => {
-    console.log('unmounted', count);
-  };
-}, [count]);
+### ⚠️ Dangerous: Non-primitives
+```javascript
+// Objects, arrays, functions are dangerous
+useEffect(() => {
+  console.log("Danger!");
+}, [{ key: "value" }, [1, 2, 3], () => {}]);
+```
+#### Characteristics:
+- New reference created on every render
+- `{}` === `{}` → `false`
+- `[] === []` → `false`
+- `(() => {}) === (() => {})` → `false`
+
+## Common Pitfalls
+
+### 1. Object Literals in Dependencies
+```javascript
+// 🚨 Infinite loop!
+useEffect(() => {
+  setState({ ...state, updated: true });
+}, [{ ...state }]); // New object every render
 ```
 
-### How This Works
-
-The effect runs whenever `count` changes because `[count]` is in the dependency array.
-
-Before the effect runs again, the previous effect is cleaned up by executing the function inside `return () => { ... }`.
-
-### Step-by-Step Execution
-
-#### 1. Initial Render (count = 0)
-When the component first mounts:
-
-```
-mounted 0
+### 2. Inline Functions in Dependencies
+```javascript
+// 🚨 Infinite loop!
+useEffect(() => {
+  fetchData();
+}, [fetchData]); // If fetchData isn't memoized
 ```
 
-- The effect runs for the first time.
-- The cleanup function does not run yet because there was no previous effect.
-
-#### 2. If count Changes to 1
-Now, `count` updates to 1, so React re-runs the effect:
-
-```
-unmounted 0
-mounted 1
+### 3. Array Literals in Dependencies
+```javascript
+// 🚨 Infinite loop!
+useEffect(() => {
+  processItems([...items]);
+}, [[...items]]); // New array every render
 ```
 
-- First, React cleans up the previous effect (`unmounted 0`).
-- Then, the new effect runs (`mounted 1`).
+## Solutions
 
-This ensures that we don't leave behind any side effects from the old value of `count`.
+### For Objects/Arrays
+```javascript
+// ✅ Solution 1: Move outside component
+const config = { apiUrl: "/data" };
 
-#### 3. If count Changes to 2
-
+function Component() {
+  useEffect(() => {
+    fetch(config.apiUrl);
+  }, []); // Safe because config is stable
+}
 ```
-unmounted 1
-mounted 2
+
+```javascript
+// ✅ Solution 2: useMemo
+function Component() {
+  const config = useMemo(() => ({ apiUrl: "/data" }), []);
+  useEffect(() => {
+    fetch(config.apiUrl);
+  }, [config]); // Safe because memoized
+}
 ```
 
-- Again, the previous effect is cleaned up (`unmounted 1`).
-- Then, the effect runs again with the new `count` value (`mounted 2`).
+```javascript
+// ✅ Solution 3: Use primitives
+function Component({ user }) {
+  useEffect(() => {
+    updateProfile(user.id);
+  }, [user.id]); // Safe because id is primitive
+}
+```
 
-### When Does unmounted Run?
+### For Functions
+```javascript
+// ✅ Solution: useCallback
+function Component() {
+  const fetchData = useCallback(() => {
+    // fetch logic
+  }, []);
 
-- Before every re-run of the effect (due to `count` changing).
-- When the component unmounts (i.e., it is removed from the DOM).
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]); // Safe because memoized
+}
+```
 
-### Key Takeaways
+## Best Practices
+- **Minimize dependencies** - Only include what's truly needed
+- **Prefer primitives** in dependency arrays when possible
+- **Memoize expensive computations** with `useMemo`
+- **Stabilize functions** with `useCallback`
+- **Lift constants up** - Move objects/arrays outside components when possible
 
-✅ Each time `count` changes, the old effect is cleaned up before running the new one.
-✅ This cleanup prevents memory leaks and ensures only the latest effect is active.
-✅ This does not mean the component itself is unmounting; it's just resetting the effect for a new `count` value.
+## Debugging Tips
+- Use the **React DevTools Profiler** to identify unnecessary re-renders
+- Add **console logs** to dependency arrays:
+
+```javascript
+useEffect(() => {
+  console.log("Effect ran");
+}, [dep]); // Add console.log(dep) above
+```
+- Consider **ESLint plugins** like `eslint-plugin-react-hooks`

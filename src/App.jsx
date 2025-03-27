@@ -1,48 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
-const App = () => {
-  const [count, setCount] = useState(0);
+function App() {
+  const defaultUser = { name: 'kiran', age: 26 };
+  const [user, setUser] = useState({});
+  const renderCount = useRef(0);
 
-  useEffect(() => {
-    console.log('mounted', count);
-
-    return () => {
-      console.log('unmounted ', count);
-    };
-  }, []);
+  renderCount.current += 1; // Increment on every render
 
   useEffect(() => {
-    console.log('mounted with dependency', count);
-
-    return () => {
-      console.log('unmounted with dependency ', count);
-    };
-  }, [count]);
+    setUser(defaultUser);
+  }, [defaultUser]);
 
   return (
-    <div className="flex flex-col w-2xl">
-      <div className="flex">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mx-auto"
-          onClick={() => {
-            setCount((count) => count + 1);
-          }}
-        >
-          Increment
-        </button>
-        <button
-          class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          onClick={() => {
-            setCount((count) => count - 1);
-          }}
-        >
-          Decrement
-        </button>
-      </div>
-
-      <p>{count}</p>
-    </div>
+    <>
+      <div>{user.name}</div>
+      <p>{renderCount.current}</p>
+    </>
   );
-};
+}
 
 export default App;
