@@ -1,61 +1,75 @@
-# Understanding React Key Prop and Why Using Index Can Be Problematic
+# Understanding `useEffect` Cleanup When Dependencies Change
 
-When working with lists in React, using the `key` prop correctly is crucial for performance and preventing unnecessary re-renders. In this article, we'll explore an example where using an index as the key leads to inefficiencies and how to fix it.
+## Introduction
 
-## The Problem: Using Index as Key
+React's `useEffect` hook allows us to perform side effects in function components, such as fetching data, setting up event listeners, or manipulating the DOM.
 
-Consider the following React component:
+A key concept in `useEffect` is **cleanup functions**, which help prevent memory leaks and ensure proper resource management.
+
+This article focuses on how `useEffect` behaves when **dependencies change** and why the **cleanup function** is essential.
+
+---
+
+## The Code in Question
 
 ```jsx
-import React, { useState } from 'react';
+useEffect(() => {
+  console.log('mounted', count);
 
-const App = () => {
-  const [users, setUsers] = useState(
-    Array.from({ length: 10 }, (_, i) => ({ id: i, name: `User ${i}` }))
-  );
-
-  const handleRemove = (id) => {
-    setUsers(users.filter((user) => user.id !== id));
+  return () => {
+    console.log('unmounted', count);
   };
-
-  return (
-    <div className='flex flex-col'>
-      {users.map((item, index) => (
-        <button key={index} onClick={() => handleRemove(item.id)}>
-          {item.name}
-        </button>
-      ))}
-    </div>
-  );
-};
-
-export default App;
+}, [count]);
 ```
 
-### Why is `key={index}` a Problem?
-React uses the `key` prop to track changes in a list efficiently. When an item is removed, React uses the keys to determine which elements need to be updated.
+### How This Works
 
-When `index` is used as the key:
-- **It does not uniquely identify the item**, meaning React may mismatch elements when an item is removed.
-- **React may re-render unnecessary elements** because it sees index-based keys shifting, leading to inefficient updates.
-- **State can be incorrectly associated with the wrong elements**, especially when components have local state or input fields.
+The effect runs whenever `count` changes because `[count]` is in the dependency array.
 
-## The Correct Approach: Using Unique IDs
-Instead of using `index`, it's best to use a unique identifier, such as `id`:
+Before the effect runs again, the previous effect is cleaned up by executing the function inside `return () => { ... }`.
 
-```jsx
-{users.map((item) => (
-  <button key={item.id} onClick={() => handleRemove(item.id)}>
-    {item.name}
-  </button>
-))}
+### Step-by-Step Execution
+
+#### 1. Initial Render (count = 0)
+When the component first mounts:
+
+```
+mounted 0
 ```
 
-### Benefits of Using Unique Keys
-✅ **Stable identity** - React can track individual items correctly.  
-✅ **Better performance** - Avoids unnecessary re-renders.  
-✅ **Preserves state** - Useful when working with form inputs or interactive elements.
+- The effect runs for the first time.
+- The cleanup function does not run yet because there was no previous effect.
 
-## Conclusion
-Using the correct key in React is critical for performance and stability. Avoid using indexes as keys in dynamic lists and always prefer unique identifiers. This small change can significantly improve the efficiency of your React application!
+#### 2. If count Changes to 1
+Now, `count` updates to 1, so React re-runs the effect:
 
+```
+unmounted 0
+mounted 1
+```
+
+- First, React cleans up the previous effect (`unmounted 0`).
+- Then, the new effect runs (`mounted 1`).
+
+This ensures that we don't leave behind any side effects from the old value of `count`.
+
+#### 3. If count Changes to 2
+
+```
+unmounted 1
+mounted 2
+```
+
+- Again, the previous effect is cleaned up (`unmounted 1`).
+- Then, the effect runs again with the new `count` value (`mounted 2`).
+
+### When Does unmounted Run?
+
+- Before every re-run of the effect (due to `count` changing).
+- When the component unmounts (i.e., it is removed from the DOM).
+
+### Key Takeaways
+
+✅ Each time `count` changes, the old effect is cleaned up before running the new one.
+✅ This cleanup prevents memory leaks and ensures only the latest effect is active.
+✅ This does not mean the component itself is unmounting; it's just resetting the effect for a new `count` value.
