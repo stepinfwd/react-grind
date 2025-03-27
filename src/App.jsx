@@ -1,53 +1,85 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+// import React, { useRef, useState } from 'react';
 
-const UserProfile = () => {
-  const isMounted = useRef(false);
-  const [userId, setUserId] = useState(1);
-  const [userData, setUserData] = useState(null);
+// const App = () => {
+//   const [password, setPassword] = useState();
+//   const [name, setName] = useState();
 
-  const fetchUserData = useCallback(async () => {
-    console.log('fetchUserData-----');
-    try {
-      const response = await fetch(
-        `https://jsonplaceholder.typicode.com/users/${userId}`
-      );
-      const data = await response.json();
-      setUserData(data);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    }
-  }, [userId]);
+//   const handleSubmit = () => {
+//     console.log('try----', { name, password });
+//   };
 
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return; // Avoid effect on first mount
-    }
+//   let renderRef = useRef(0);
 
-    fetchUserData();
-  }, [fetchUserData]);
+//   console.log('renderCount', renderRef.current++);
+
+//   return (
+//     <div className="w-5xl">
+//       <form className="flex flex-col" onSubmit={handleSubmit}>
+//         <label>name</label>
+//         <input
+//           type="text"
+//           name="name"
+//           onChange={(e) => setName(e.target.value)}
+//         ></input>
+//         <label>password</label>
+//         <input
+//           type="password"
+//           name="password"
+//           onChange={(e) => setPassword(e.target.value)}
+//         ></input>
+
+//         <button type="submit">Submit</button>
+//       </form>
+//     </div>
+//   );
+// };
+
+// export default App;
+
+import React, { useRef, useState } from 'react';
+
+const App = () => {
+  // const [password, setPassword] = useState();
+  // const [name, setName] = useState();
+
+  let passwordRef = useRef();
+  let nameRef = useRef();
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    console.log('try----', {
+      name: nameRef.current.value,
+      password: passwordRef.current.value,
+    });
+  };
+
+  let renderRef = useRef(0);
+
+  console.log('renderCount', renderRef.current++);
 
   return (
-    <div>
-      <h2>User Profile</h2>
-      {userData ? (
-        <div>
-          <p>
-            <strong>Name:</strong> {userData.name}
-          </p>
-          <p>
-            <strong>Email:</strong> {userData.email}
-          </p>
-          <p>
-            <strong>Phone:</strong> {userData.phone}
-          </p>
-        </div>
-      ) : (
-        <p>Loading...</p>
-      )}
-      <button onClick={() => setUserId((prev) => prev + 1)}>Next User</button>
+    <div className="w-5xl">
+      <form className="flex flex-col" onSubmit={handleSubmit}>
+        <label>name</label>
+        <input
+          type="text"
+          name="name"
+          ref={nameRef}
+          // onChange={(e) => setName(e.target.value)}
+        ></input>
+        <label>password</label>
+        <input
+          type="password"
+          name="password"
+          ref={passwordRef}
+
+          // onChange={(e) => setPassword(e.target.value)}
+        ></input>
+
+        <button type="submit">Submit</button>
+      </form>
     </div>
   );
 };
 
-export default UserProfile;
+export default App;
