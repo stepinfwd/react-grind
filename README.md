@@ -1,75 +1,63 @@
-# Understanding `useEffect` Cleanup When Dependencies Change
+# ScoreCard React App
 
-## Introduction
+## Overview
+This is a simple React application that tracks player scores using the `ScoreCard` component. The app allows switching between Player 1 and Player 2. However, an issue arises where the score persists even after switching players. This README explains why that happens and how to fix it.
 
-React's `useEffect` hook allows us to perform side effects in function components, such as fetching data, setting up event listeners, or manipulating the DOM.
+## Issue: Score Persists When Switching Players
+By default, when switching players, the `ScoreCard` should reset the score (`count`). However, React's reconciliation process **reuses** the same component instance instead of unmounting and remounting it. This causes the score state to persist across player switches.
 
-A key concept in `useEffect` is **cleanup functions**, which help prevent memory leaks and ensure proper resource management.
+## Solution: Use Unique `key` Prop
+To force React to treat `ScoreCard` as a **new** component when switching players, we use a unique `key` prop.
 
-This article focuses on how `useEffect` behaves when **dependencies change** and why the **cleanup function** is essential.
-
----
-
-## The Code in Question
-
+### **Before (Issue Present)**
 ```jsx
-useEffect(() => {
-  console.log('mounted', count);
+const App = () => {
+  const [isPlayer1, setIsPlayer1] = useState(true);
 
-  return () => {
-    console.log('unmounted', count);
-  };
-}, [count]);
+  return (
+    <div>
+      {isPlayer1 ? (
+        <ScoreCard player="player1" />
+      ) : (
+        <ScoreCard player="player2" />
+      )}
+      
+      <Button onClick={() => setIsPlayer1(false)}>Change player</Button>
+    </div>
+  );
+};
+```
+**Problem:** React reuses the `ScoreCard` component, so the score persists.
+
+### **After (Fixed)**
+```jsx
+const App = () => {
+  const [isPlayer1, setIsPlayer1] = useState(true);
+
+  return (
+    <div>
+      {isPlayer1 ? (
+        <ScoreCard key="player1" player="player1" />
+      ) : (
+        <ScoreCard key="player2" player="player2" />
+      )}
+      
+      <Button onClick={() => setIsPlayer1(false)}>Change player</Button>
+    </div>
+  );
+};
 ```
 
-### How This Works
+### **Why Does This Work?**
+- The `key` prop tells React that `ScoreCard` should be treated as a **new instance** when switching players.
+- This ensures that the component is **fully unmounted and remounted**, resetting the score to `0`.
 
-The effect runs whenever `count` changes because `[count]` is in the dependency array.
-
-Before the effect runs again, the previous effect is cleaned up by executing the function inside `return () => { ... }`.
-
-### Step-by-Step Execution
-
-#### 1. Initial Render (count = 0)
-When the component first mounts:
-
-```
-mounted 0
+## Run the Project
+```sh
+npm install
+npm start
 ```
 
-- The effect runs for the first time.
-- The cleanup function does not run yet because there was no previous effect.
+## Conclusion
+Using a unique `key` prop is a simple way to ensure that component state resets when switching between different players. 🎉
 
-#### 2. If count Changes to 1
-Now, `count` updates to 1, so React re-runs the effect:
-
-```
-unmounted 0
-mounted 1
-```
-
-- First, React cleans up the previous effect (`unmounted 0`).
-- Then, the new effect runs (`mounted 1`).
-
-This ensures that we don't leave behind any side effects from the old value of `count`.
-
-#### 3. If count Changes to 2
-
-```
-unmounted 1
-mounted 2
-```
-
-- Again, the previous effect is cleaned up (`unmounted 1`).
-- Then, the effect runs again with the new `count` value (`mounted 2`).
-
-### When Does unmounted Run?
-
-- Before every re-run of the effect (due to `count` changing).
-- When the component unmounts (i.e., it is removed from the DOM).
-
-### Key Takeaways
-
-✅ Each time `count` changes, the old effect is cleaned up before running the new one.
-✅ This cleanup prevents memory leaks and ensures only the latest effect is active.
-✅ This does not mean the component itself is unmounting; it's just resetting the effect for a new `count` value.
