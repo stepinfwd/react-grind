@@ -1,6 +1,6 @@
 # Understanding React Key Prop and Why Using Index Can Be Problematic
 
-When working with lists in React, using the `key` prop correctly is crucial for performance and preventing unnecessary re-renders. In this article, we'll explore an example where using an index as the key leads to inefficiencies and how to fix it.
+When working with lists in React, using the `key` prop correctly is crucial for performance and preventing unnecessary re-renders. In this article, we'll explore an example where using an index as the key leads to inefficiencies and how to fix it
 
 ## The Problem: Using Index as Key
 
